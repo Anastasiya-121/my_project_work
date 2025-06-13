@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анимация дельтоиды</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+            font-size: 14px;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        input[type="number"]:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+        .primitive-selector {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .primitive-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .primitive-option:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+        .primitive-option input[type="radio"] {
+            margin: 0;
+        }
+        .animation-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .play-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+        .pause-btn {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+            color: white;
+        }
+        .reset-btn {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            color: white;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        .canvas-container {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .chart-wrapper {
+            flex: 1;
+            min-width: 400px;
+            max-width: 500px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .chart-title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.2em;
+        }
+        canvas {
+            border: 3px solid #333;
+            border-radius: 10px;
+            display: block;
+            width: 100%;
+            height: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .info {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #e8f5e8, #d4f3d4);
+            border-radius: 15px;
+            border-left: 5px solid #4CAF50;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .formula {
+            font-family: 'Courier New', monospace;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        input[type="range"] {
+            width: 120px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Анимация дельтоиды с движущимся примитивом</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="param-a">Параметр a:</label>
+                <input type="number" id="param-a" value="1" step="0.1" min="0.1">
+            </div>
+            <div class="control-group">
+                <label for="param-b">Параметр b:</label>
+                <input type="number" id="param-b" value="0.33" step="0.01" min="0.01">
+            </div>
+            <div class="control-group">
+                <label>Примитив:</label>
+                <div class="primitive-selector">
+                    <div class="primitive-option">
+                        <input type="radio" id="circle" name="primitive" value="circle" checked>
+                        <label for="circle">🔴 Окружность</label>
+                    </div>
+                    <div class="primitive-option">
+                        <input type="radio" id="square" name="primitive" value="square">
+                        <label for="square">🟦 Квадрат</label>
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <label for="primitive-size">Размер:</label>
+                <input type="number" id="primitive-size" value="5" step="0.5" min="2" max="20">
+            </div>
+            <div class="control-group">
+                <label for="speed">Скорость:</label>
+                <div class="speed-control">
+                    <input type="range" id="speed" min="0.1" max="3" step="0.1" value="1">
+                    <span id="speed-value">1.0x</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="animation-controls">
+            <button class="play-btn" id="play-btn">▶ Воспроизвести</button>
+            <button class="pause-btn" id="pause-btn">⏸ Пауза</button>
+            <button class="reset-btn" id="reset-btn">🔄 Сброс</button>
+        </div>
+
+        <div class="canvas-container">
+            <div class="chart-wrapper">
+                <div class="chart-title">Декартова система координат</div>
+                <canvas id="cartesian-canvas" width="400" height="400"></canvas>
+            </div>
+            <div class="chart-wrapper">
+                <div class="chart-title">Полярная система координат</div>
+                <canvas id="polar-canvas" width="400" height="400"></canvas>
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>Анимация дельтоиды</h3>
+            <p><strong>Параметрические уравнения:</strong></p>
+            <div class="formula">
+                x = a * (2 * cos(t) + b * cos(2*t/b))<br>
+                y = a * (2 * sin(t) - b * sin(2*t/b))
+            </div>
+            <p><strong>Управление анимацией:</strong></p>
+            <ul>
+                <li>Выберите тип примитива: красная окружность (четный вариант) или синий квадрат (нечетный вариант)</li>
+                <li>Настройте размер примитива (минимум 2)</li>
+                <li>Регулируйте скорость анимации от 0.1x до 3.0x</li>
+                <li>Используйте кнопки для управления воспроизведением</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        class DeltoidAnimator {
+            constructor() {
+                this.cartesianCanvas = document.getElementById('cartesian-canvas');
+                this.polarCanvas = document.getElementById('polar-canvas');
+                this.cartesianCtx = this.cartesianCanvas.getContext('2d');
+                this.polarCtx = this.polarCanvas.getContext('2d');
+                
+                this.paramA = document.getElementById('param-a');
+                this.paramB = document.getElementById('param-b');
+                this.primitiveSize = document.getElementById('primitive-size');
+                this.speedSlider = document.getElementById('speed');
+                this.speedValue = document.getElementById('speed-value');
+                
+                this.playBtn = document.getElementById('play-btn');
+                this.pauseBtn = document.getElementById('pause-btn');
+                this.resetBtn = document.getElementById('reset-btn');
+                
+                this.animationId = null;
+                this.isPlaying = false;
+                this.currentT = 0;
+                this.speed = 1;
+                this.primitiveType = 'circle';
+                
+                this.setupEventListeners();
+                this.resizeCanvases();
+                this.drawStatic();
+            }
+
+            setupEventListeners() {
+                this.paramA.addEventListener('input', () => this.drawStatic());
+                this.paramB.addEventListener('input', () => this.drawStatic());
+                this.primitiveSize.addEventListener('input', () => this.drawStatic());
+                
+                this.speedSlider.addEventListener('input', () => {
+                    this.speed = parseFloat(this.speedSlider.value);
+                    this.speedValue.textContent = this.speed.toFixed(1) + 'x';
+                });
+                
+                document.querySelectorAll('input[name="primitive"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        this.primitiveType = e.target.value;
+                        this.drawStatic();
+                    });
+                });
+                
+                this.playBtn.addEventListener('click', () => this.play());
+                this.pauseBtn.addEventListener('click', () => this.pause());
+                this.resetBtn.addEventListener('click', () => this.reset());
+                
+                window.addEventListener('resize', () => {
+                    this.resizeCanvases();
+                    this.drawStatic();
+                });
+            }
+
+            resizeCanvases() {
+                const containers = document.querySelectorAll('.chart-wrapper');
+                containers.forEach(container => {
+                    const canvas = container.querySelector('canvas');
+                    const rect = container.getBoundingClientRect();
+                    const size = Math.min(rect.width - 40, 500);
+                    canvas.width = size;
+                    canvas.height = size;
+                });
+            }
+
+            drawGrid(ctx, canvas, isPolar = false) {
+                const width = canvas.width;
+                const height = canvas.height;
+                const centerX = width / 2;
+                const centerY = height / 2;
+                
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 1;
+                
+                if (isPolar) {
+                    const maxRadius = Math.min(width, height) * 0.35;
+                    
+                    for (let r = maxRadius / 6; r <= maxRadius; r += maxRadius / 6) {
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, r, 0, 2 * Math.PI);
+                        ctx.stroke();
+                    }
+                    
+                    for (let angle = 0; angle < 2 * Math.PI; angle += Math.PI / 6) {
+                        ctx.beginPath();
+                        ctx.moveTo(centerX, centerY);
+                        ctx.lineTo(centerX + maxRadius * Math.cos(angle), 
+                                  centerY + maxRadius * Math.sin(angle));
+                        ctx.stroke();
+                    }
+                } else {
+                    const gridSize = 40;
+                    
+                    for (let x = centerX % gridSize; x < width; x += gridSize) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, height);
+                        ctx.stroke();
+                    }
+                    
+                    for (let y = centerY % gridSize; y < height; y += gridSize) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, y);
+                        ctx.lineTo(width, y);
+                        ctx.stroke();
+                    }
+                }
+                
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, 0);
+                ctx.lineTo(centerX, height);
+                ctx.moveTo(0, centerY);
+                ctx.lineTo(width, centerY);
+                ctx.stroke();
+            }
+
+            calculateDeltoid(t, a, b) {
+                const x = a * (2 * Math.cos(t) + b * Math.cos(2 * t / b));
+                const y = a * (2 * Math.sin(t) - b * Math.sin(2 * t / b));
+                return { x, y };
+            }
+
+            drawDeltoidPath(ctx, canvas, a, b, isPolar = false) {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                let scale;
+                
+                if (isPolar) {
+                    const maxRadius = Math.min(canvas.width, canvas.height) * 0.35;
+                    let maxDist = 0;
+                    for (let t = 0; t <= 6 * Math.PI * b; t += 0.1) {
+                        const point = this.calculateDeltoid(t, a, b);
+                        const dist = Math.sqrt(point.x * point.x + point.y * point.y);
+                        maxDist = Math.max(maxDist, dist);
+                    }
+                    scale = maxRadius / maxDist;
+                } else {
+                    scale = Math.min(canvas.width, canvas.height) / (8 * a);
+                }
+                
+                ctx.strokeStyle = isPolar ? '#4444ff' : '#666666';
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.7;
+                ctx.beginPath();
+                
+                let firstPoint = true;
+                for (let t = 0; t <= 6 * Math.PI * b; t += 0.01) {
+                    const point = this.calculateDeltoid(t, a, b);
+                    let screenX, screenY;
+                    
+                    if (isPolar) {
+                        const r = Math.sqrt(point.x * point.x + point.y * point.y);
+                        const theta = Math.atan2(point.y, point.x);
+                        screenX = centerX + r * scale * Math.cos(theta);
+                        screenY = centerY + r * scale * Math.sin(theta);
+                    } else {
+                        screenX = centerX + point.x * scale;
+                        screenY = centerY - point.y * scale;
+                    }
+                    
+                    if (firstPoint) {
+                        ctx.moveTo(screenX, screenY);
+                        firstPoint = false;
+                    } else {
+                        ctx.lineTo(screenX, screenY);
+                    }
+                }
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
+
+            drawPrimitive(ctx, x, y, size, type) {
+                ctx.save();
+                
+                if (type === 'circle') {
+                    ctx.fillStyle = '#ff4444';
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.strokeStyle = '#cc0000';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = '#4444ff';
+                    ctx.fillRect(x - size, y - size, size * 2, size * 2);
+                    ctx.strokeStyle = '#0000cc';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x - size, y - size, size * 2, size * 2);
+                }
+                
+                ctx.restore();
+            }
+
+            drawStatic() {
+                const a = parseFloat(this.paramA.value) || 1;
+                const b = parseFloat(this.paramB.value) || 0.33;
+                
+                // Очистка канвасов
+                this.cartesianCtx.clearRect(0, 0, this.cartesianCanvas.width, this.cartesianCanvas.height);
+                this.polarCtx.clearRect(0, 0, this.polarCanvas.width, this.polarCanvas.height);
+                
+                // Рисование сеток
+                this.drawGrid(this.cartesianCtx, this.cartesianCanvas, false);
+                this.drawGrid(this.polarCtx, this.polarCanvas, true);
+                
+                // Рисование траекторий
+                this.drawDeltoidPath(this.cartesianCtx, this.cartesianCanvas, a, b, false);
+                this.drawDeltoidPath(this.polarCtx, this.polarCanvas, a, b, true);
+                
+                // Рисование примитива в текущей позиции
+                this.drawAnimationFrame();
+            }
+
+            drawAnimationFrame() {
+                const a = parseFloat(this.paramA.value) || 1;
+                const b = parseFloat(this.paramB.value) || 0.33;
+                const size = parseFloat(this.primitiveSize.value) || 5;
+                
+                const point = this.calculateDeltoid(this.currentT, a, b);
+                
+                // Декартова система
+                const cartCenterX = this.cartesianCanvas.width / 2;
+                const cartCenterY = this.cartesianCanvas.height / 2;
+                const cartScale = Math.min(this.cartesianCanvas.width, this.cartesianCanvas.height) / (8 * a);
+                const cartX = cartCenterX + point.x * cartScale;
+                const cartY = cartCenterY - point.y * cartScale;
+                
+                this.drawPrimitive(this.cartesianCtx, cartX, cartY, size, this.primitiveType);
+                
+                // Полярная система
+                const r = Math.sqrt(point.x * point.x + point.y * point.y);
+                const theta = Math.atan2(point.y, point.x);
+                
+                const polarCenterX = this.polarCanvas.width / 2;
+                const polarCenterY = this.polarCanvas.height / 2;
+                const maxRadius = Math.min(this.polarCanvas.width, this.polarCanvas.height) * 0.35;
+                
+                let maxDist = 0;
+                for (let t = 0; t <= 6 * Math.PI * b; t += 0.1) {
+                    const testPoint = this.calculateDeltoid(t, a, b);
+                    const testDist = Math.sqrt(testPoint.x * testPoint.x + testPoint.y * testPoint.y);
+                    maxDist = Math.max(maxDist, testDist);
+                }
+                const polarScale = maxRadius / maxDist;
+                
+                const polarX = polarCenterX + r * polarScale * Math.cos(theta);
+                const polarY = polarCenterY + r * polarScale * Math.sin(theta);
+                
+                this.drawPrimitive(this.polarCtx, polarX, polarY, size, this.primitiveType);
+            }
+
+            animate() {
+                if (!this.isPlaying) return;
+                
+                const b = parseFloat(this.paramB.value) || 0.33;
+                this.currentT += 0.02 * this.speed;
+                
+                if (this.currentT > 6 * Math.PI * b) {
+                    this.currentT = 0;
+                }
+                
+                this.drawStatic();
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+
+            play() {
+                if (!this.isPlaying) {
+                    this.isPlaying = true;
+                    this.animate();
+                }
+            }
+
+            pause() {
+                this.isPlaying = false;
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+            }
+
+            reset() {
+                this.pause();
+                this.currentT = 0;
+                this.drawStatic();
+            }
+        }
+
+        window.addEventListener('load', () => {
+            new DeltoidAnimator();
+        });
+    </script>
+</body>
+</html>

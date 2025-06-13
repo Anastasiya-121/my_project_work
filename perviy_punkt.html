@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>График дельтоиды</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            text-align: center;
+        }
+        input[type="number"]:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        .canvas-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .chart-wrapper {
+            flex: 1;
+            min-width: 400px;
+            max-width: 500px;
+        }
+        .chart-title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        canvas {
+            border: 2px solid #333;
+            border-radius: 5px;
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e8;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        .formula {
+            font-family: 'Courier New', monospace;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>График дельтоиды в декартовой и полярной системах координат</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="param-a">Параметр a:</label>
+                <input type="number" id="param-a" value="1" step="0.1" min="0.1">
+            </div>
+            <div class="control-group">
+                <label for="param-b">Параметр b:</label>
+                <input type="number" id="param-b" value="0.33" step="0.01" min="0.01">
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <div class="chart-wrapper">
+                <div class="chart-title">Декартова система координат</div>
+                <canvas id="cartesian-canvas" width="400" height="400"></canvas>
+            </div>
+            <div class="chart-wrapper">
+                <div class="chart-title">Полярная система координат</div>
+                <canvas id="polar-canvas" width="400" height="400"></canvas>
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>Дельтоида</h3>
+            <p><strong>Параметрические уравнения:</strong></p>
+            <div class="formula">
+                x = a * (2 * cos(t) + b * cos(2*t/b))<br>
+                y = a * (2 * sin(t) - b * sin(2*t/b))
+            </div>
+            <p><strong>Полярные координаты:</strong></p>
+            <div class="formula">
+                r = sqrt(x² + y²)<br>
+                θ = atan2(y, x)
+            </div>
+            <p>Дельтоида - это кривая, которую описывает точка на окружности радиуса <em>b</em>, катящейся внутри неподвижной окружности радиуса <em>3b</em>.</p>
+        </div>
+    </div>
+
+    <script>
+        class DeltoidPlotter {
+            constructor() {
+                this.cartesianCanvas = document.getElementById('cartesian-canvas');
+                this.polarCanvas = document.getElementById('polar-canvas');
+                this.cartesianCtx = this.cartesianCanvas.getContext('2d');
+                this.polarCtx = this.polarCanvas.getContext('2d');
+                
+                this.paramA = document.getElementById('param-a');
+                this.paramB = document.getElementById('param-b');
+                
+                this.setupEventListeners();
+                this.resizeCanvases();
+                this.plot();
+            }
+
+            setupEventListeners() {
+                this.paramA.addEventListener('input', () => this.plot());
+                this.paramB.addEventListener('input', () => this.plot());
+                
+                window.addEventListener('resize', () => {
+                    this.resizeCanvases();
+                    this.plot();
+                });
+            }
+
+            resizeCanvases() {
+                const containers = document.querySelectorAll('.chart-wrapper');
+                containers.forEach(container => {
+                    const canvas = container.querySelector('canvas');
+                    const rect = container.getBoundingClientRect();
+                    const size = Math.min(rect.width - 20, 500);
+                    canvas.width = size;
+                    canvas.height = size;
+                });
+            }
+
+            drawGrid(ctx, canvas, isPolar = false) {
+                const width = canvas.width;
+                const height = canvas.height;
+                const centerX = width / 2;
+                const centerY = height / 2;
+                
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 1;
+                
+                if (isPolar) {
+                    // Полярная сетка - концентрические окружности и радиальные линии
+                    const maxRadius = Math.min(width, height) * 0.4;
+                    
+                    // Концентрические окружности
+                    for (let r = maxRadius / 6; r <= maxRadius; r += maxRadius / 6) {
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, r, 0, 2 * Math.PI);
+                        ctx.stroke();
+                    }
+                    
+                    // Радиальные линии
+                    for (let angle = 0; angle < 2 * Math.PI; angle += Math.PI / 6) {
+                        ctx.beginPath();
+                        ctx.moveTo(centerX, centerY);
+                        ctx.lineTo(centerX + maxRadius * Math.cos(angle), 
+                                  centerY + maxRadius * Math.sin(angle));
+                        ctx.stroke();
+                    }
+                } else {
+                    // Декартова сетка
+                    const gridSize = 40;
+                    
+                    // Вертикальные линии
+                    for (let x = centerX % gridSize; x < width; x += gridSize) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, height);
+                        ctx.stroke();
+                    }
+                    
+                    // Горизонтальные линии
+                    for (let y = centerY % gridSize; y < height; y += gridSize) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, y);
+                        ctx.lineTo(width, y);
+                        ctx.stroke();
+                    }
+                }
+                
+                // Оси координат
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, 0);
+                ctx.lineTo(centerX, height);
+                ctx.moveTo(0, centerY);
+                ctx.lineTo(width, centerY);
+                ctx.stroke();
+            }
+
+            calculateDeltoid(t, a, b) {
+                const x = a * (2 * Math.cos(t) + b * Math.cos(2 * t / b));
+                const y = a * (2 * Math.sin(t) - b * Math.sin(2 * t / b));
+                return { x, y };
+            }
+
+            plotCartesian() {
+                const canvas = this.cartesianCanvas;
+                const ctx = this.cartesianCtx;
+                const a = parseFloat(this.paramA.value) || 1;
+                const b = parseFloat(this.paramB.value) || 0.33;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                this.drawGrid(ctx, canvas, false);
+                
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const scale = Math.min(canvas.width, canvas.height) / (8 * a);
+                
+                ctx.strokeStyle = '#ff4444';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                let firstPoint = true;
+                for (let t = 0; t <= 6 * Math.PI * b; t += 0.01) {
+                    const point = this.calculateDeltoid(t, a, b);
+                    const screenX = centerX + point.x * scale;
+                    const screenY = centerY - point.y * scale;
+                    
+                    if (firstPoint) {
+                        ctx.moveTo(screenX, screenY);
+                        firstPoint = false;
+                    } else {
+                        ctx.lineTo(screenX, screenY);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            plotPolar() {
+                const canvas = this.polarCanvas;
+                const ctx = this.polarCtx;
+                const a = parseFloat(this.paramA.value) || 1;
+                const b = parseFloat(this.paramB.value) || 0.33;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                this.drawGrid(ctx, canvas, true);
+                
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const maxRadius = Math.min(canvas.width, canvas.height) * 0.4;
+                
+                // Вычисляем максимальное расстояние для масштабирования
+                let maxDist = 0;
+                for (let t = 0; t <= 6 * Math.PI * b; t += 0.1) {
+                    const point = this.calculateDeltoid(t, a, b);
+                    const dist = Math.sqrt(point.x * point.x + point.y * point.y);
+                    maxDist = Math.max(maxDist, dist);
+                }
+                
+                const scale = maxRadius / maxDist;
+                
+                ctx.strokeStyle = '#4444ff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                let firstPoint = true;
+                for (let t = 0; t <= 6 * Math.PI * b; t += 0.01) {
+                    const point = this.calculateDeltoid(t, a, b);
+                    const r = Math.sqrt(point.x * point.x + point.y * point.y);
+                    const theta = Math.atan2(point.y, point.x);
+                    
+                    const screenX = centerX + r * scale * Math.cos(theta);
+                    const screenY = centerY + r * scale * Math.sin(theta);
+                    
+                    if (firstPoint) {
+                        ctx.moveTo(screenX, screenY);
+                        firstPoint = false;
+                    } else {
+                        ctx.lineTo(screenX, screenY);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            plot() {
+                this.plotCartesian();
+                this.plotPolar();
+            }
+        }
+
+        // Инициализация приложения
+        window.addEventListener('load', () => {
+            new DeltoidPlotter();
+        });
+    </script>
+</body>
+</html>
